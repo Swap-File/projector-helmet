@@ -94,7 +94,7 @@ static int legacy_run(const struct gbm *gbm, const struct egl *egl)
 
 		drm_wait_master(drm.fd);
 		ret = drmModePageFlip(drm.fd, drm.crtc_id, fb->fb_id,DRM_MODE_PAGE_FLIP_EVENT, &waiting_for_flip);
-		drmDropMaster(drm.fd);
+		//drmDropMaster(drm.fd);
 		
 		debug_msg[0] = '\0';
 		if (ret) {

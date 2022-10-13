@@ -21,8 +21,10 @@ static volatile bool gstcontext_texture_fresh; //passed to gstcontext
 
 static struct egl egl;
 
+bool button_indicated = false;
+
 static GLuint basic_program,basic_u_mvpMatrix,basic_in_Position,basic_in_TexCoord,basic_u_Texture;
-static GLuint helmet_mask;
+static GLuint helmet_mask,helmet_mask2;
 
 #define VIDEO_WIDTH 1280
 #define VIDEO_HEIGHT 720
@@ -57,7 +59,7 @@ static GLfloat vTexCoords[] = {
 	1.0f, 0.0f,
 
 	// puddle
-		1.0f, 0.0f,
+	1.0f, 0.0f,
 	0.0f, 0.0f,
 	1.0f, 1.0f,
 	0.0f, 1.0f,
@@ -69,46 +71,109 @@ static GLfloat vTexCoords[] = {
 	0.0f, 0.0f,
 };
 
-
-
-
 volatile bool video_done = false;
 
+uint32_t auto_advance_time = 0;
+
 bool auto_advance = false;
-bool auto_swap = false;
+bool auto_change_category = false;
+
+int mode = 0;
+
+int eighties_index = 50;  // 50 to 57   8 items    id 2
+int eighties_index_qty = GST_MOVIE_80s_LAST - GST_MOVIE_80s_FIRST + 1;
+
+int fast_index = 58;   // 58 to 67   10 items    id 3
+int fast_index_qty = GST_MOVIE_FAST_LAST - GST_MOVIE_FAST_FIRST + 1;
+
+int slow_index = 68;   //68 to 80   13 items   id4 
+int slow_index_qty = GST_MOVIE_SLOW_LAST - GST_MOVIE_SLOW_FIRST + 1;
+
+int other_index = 81;  //81 to 88   8 items    id 1
+int other_index_qty = GST_MOVIE_OTHER_LAST - GST_MOVIE_OTHER_FIRST + 1;
+
+int audio_index = 6;    // id 5
+int audio_index_qty = GST_LIBVISUAL_LAST - GST_LIBVISUAL_FIRST + 1;
 
 
 int gst_state = GST_VIDEOTESTSRC_CUBED;
-int movie_index = GST_MOVIE_FIRST;
-int audio_index = GST_LIBVISUAL_FIRST;
 
-	static uint32_t adv_time = 0;
-
-void next_or_previous(int type){
-	
-	int maximum = GST_VIDEOTESTSRC_CUBED;
-	int minimum = GST_VIDEOTESTSRC_CUBED;
-	
-	if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
-		maximum = GST_LIBVISUAL_LAST;
-		minimum = GST_LIBVISUAL_FIRST;
-	}
-	if (gst_state >= GST_MOVIE_FIRST && gst_state <= GST_MOVIE_LAST){
-		maximum = GST_MOVIE_LAST;
-		minimum = GST_MOVIE_FIRST;	
-	}
-	
-	if ( type){
-		gst_state++;
-		if (gst_state > maximum)
-		gst_state = minimum;
+void set_mode(int direction, int count){
+	if (count > 0){
+		count--;
+		if (direction == 1){
+			gst_state = GST_MOVIE_OTHER_FIRST + (count % other_index_qty);
+			other_index = gst_state;
+		}
+		if (direction == 2){
+			gst_state = GST_MOVIE_80s_FIRST + ( count % eighties_index_qty);
+			eighties_index = gst_state;
+		}
+		if (direction ==3){
+			gst_state = GST_MOVIE_FAST_FIRST + (count % fast_index_qty);
+			fast_index = gst_state;
+		}
+		if (direction == 4){
+			gst_state = GST_MOVIE_SLOW_FIRST+(count % slow_index_qty);
+			slow_index = gst_state;
+		}
+		if (direction == 5){
+			gst_state = GST_LIBVISUAL_FIRST + (count % audio_index_qty);
+			audio_index = gst_state;
+		}	
 	}else{
-		gst_state--;
-		if (gst_state < minimum)
-		gst_state = maximum;
-		
+		if (direction == 1){
+			gst_state = other_index;
+			other_index = GST_MOVIE_OTHER_FIRST + ((other_index - GST_MOVIE_OTHER_FIRST + 1) % other_index_qty);
+		}
+		if (direction == 2){
+			gst_state = eighties_index;
+			eighties_index = GST_MOVIE_80s_FIRST + ((eighties_index - GST_MOVIE_80s_FIRST + 1) % eighties_index_qty);
+		}
+		if (direction ==3){
+			gst_state = fast_index;
+			fast_index = GST_MOVIE_FAST_FIRST + ((fast_index - GST_MOVIE_FAST_FIRST + 1) % fast_index_qty);
+		}
+		if (direction == 4){
+			gst_state = slow_index;
+			slow_index = GST_MOVIE_SLOW_FIRST + ((slow_index - GST_MOVIE_SLOW_FIRST + 1) % slow_index_qty);
+		}
+		if (direction == 5){
+			gst_state = audio_index;
+			audio_index = GST_LIBVISUAL_FIRST + ((audio_index - GST_LIBVISUAL_FIRST + 1) % audio_index_qty);
+		}	
 	}
-	adv_time = millis();
+	
+
+}
+void plus_minus(int count){
+	if (gst_state >= GST_MOVIE_80s_FIRST && gst_state <= GST_MOVIE_80s_LAST){
+		int current = (gst_state - GST_MOVIE_80s_FIRST);
+		gst_state = GST_MOVIE_80s_FIRST + ((current + eighties_index_qty + count) % eighties_index_qty);
+		eighties_index = gst_state;
+	}
+	if (gst_state >= GST_MOVIE_FAST_FIRST && gst_state <= GST_MOVIE_FAST_LAST){
+		int current = (gst_state - GST_MOVIE_FAST_FIRST);
+		gst_state = GST_MOVIE_FAST_FIRST + ((current + fast_index_qty + count) % fast_index_qty);
+		fast_index = gst_state;
+	}
+	if (gst_state >= GST_MOVIE_SLOW_FIRST && gst_state <= GST_MOVIE_SLOW_LAST){
+		int current = (gst_state - GST_MOVIE_SLOW_FIRST);
+		gst_state = GST_MOVIE_SLOW_FIRST + ((current + slow_index_qty + count) % slow_index_qty);
+		slow_index = gst_state;
+	}
+	if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
+		int current = (gst_state - GST_LIBVISUAL_FIRST);
+		gst_state = GST_LIBVISUAL_FIRST + ((current + audio_index_qty + count) % audio_index_qty);
+		audio_index = gst_state;
+	}
+	if (gst_state >= GST_MOVIE_OTHER_FIRST && gst_state <= GST_MOVIE_OTHER_LAST){
+		int current = (gst_state - GST_MOVIE_OTHER_FIRST);
+		gst_state = GST_MOVIE_OTHER_FIRST + ((current + other_index_qty + count) % other_index_qty);
+		other_index = gst_state;
+	}
+	
+	
 }
 
 static void projector_scene_draw(unsigned i,char *debug_msg)
@@ -122,73 +187,36 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 	}
 	
 
-	if (auto_advance){
-		if (millis() - adv_time > 10000){
-			next_or_previous(true);
-			
-		}		
-	}
-	
-	
 	if (debug_msg[0] != '\0') {
 		int temp[3];
-		int result = sscanf(debug_msg,"%d", &temp[0]);
+		int result = sscanf(debug_msg,"%d %d", &temp[0], &temp[1]);
+		if (result == 2) {
+			if (temp[0] >= 1 && temp[0] <= 5){
+				set_mode ( temp[0], temp[1]);
+			}
+		    if (temp[0] == 6){
+				plus_minus( (temp[1] + 1));
+			}
+			 if (temp[0] == 7){
+				plus_minus(-1 * (temp[1] + 1));
+			}
+		}
+		
+		
 		if (result == 1) {
 			printf("\nDebug Message Parsed: Setting gst_state: %d \n",temp[0]);
-			
-			if (temp[0] == 100){  //Trigger + back button
-				
-				if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
-					//TODO special mode when already in mode
-				}else{
-					gst_state = audio_index;
-				}
-			}else if (temp[0] == 101){  //plus button
-				next_or_previous(true);
-				
-			}else if (temp[0] == 102){  //minus button
-				next_or_previous(false);	
-			}else if (temp[0] == 120){  //big button
-						next_or_previous(true);
-			adv_time = millis();
-			}else if (temp[0] == 106){  //Trigger + minus button
-				gst_state = 0;
-			}else if (temp[0] == 108){  //Trigger + home button
-			
-						if (gst_state != 0){
-				auto_swap = true;
-				} else {
-					gst_state = movie_index;
-				}
-				
-			}else if (temp[0] == 107){  //Trigger + back button
-				if (gst_state != 0){
-				auto_swap = false;
-				} else {
-					gst_state = audio_index;
-				}
-				
+			if (temp[0] == 200){
+				button_indicated = true;
+			}else if (temp[0] == 201){
+				button_indicated = false;
 			}else{
-				
-				gst_state = temp[0];
-				
+				gst_state = temp[0];			
 			}
-			
 		}
 	}
 	
-	if (gst_state == 0){
-		movie_index = GST_MOVIE_FIRST;
-		audio_index = GST_LIBVISUAL_FIRST;
-	}
 	
-	//save indexes
-	if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
-		audio_index = gst_state;
-	}
-	if (gst_state >= GST_MOVIE_FIRST && gst_state <= GST_MOVIE_LAST){
-		movie_index = gst_state;
-	}
+
 	
 	bool frameskip = false;
 	uint32_t start_time = millis();
@@ -232,7 +260,13 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	//this is the polygon that displays the gstreamer texture
-	glBindTexture(GL_TEXTURE_2D,helmet_mask);
+	if(button_indicated == false){
+		glBindTexture(GL_TEXTURE_2D,helmet_mask);
+	}else{
+		glBindTexture(GL_TEXTURE_2D,helmet_mask2);
+	}
+
+	
 	glUniform1i(basic_u_Texture, 0); /* '0' refers to texture unit 0. */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glEnableVertexAttribArray(basic_in_Position);
@@ -242,7 +276,7 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 	glUniformMatrix4fv(basic_u_mvpMatrix, 1, GL_FALSE, &modelviewprojection.m[0][0]);
 
 	/* Draw Masking */
-	  glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
+	glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
 	
 	/* FPS Counter */
 	glFinish();
@@ -278,7 +312,7 @@ const struct egl * scene_init(const struct gbm *gbm, int samples)
 	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vVertices), sizeof(vTexCoords), &vTexCoords[0]);
 
 	helmet_mask = png_load("/home/pi/projector/mask.png", NULL, NULL);
-
+	helmet_mask2 = png_load("/home/pi/projector/mask2.png", NULL, NULL);
 	//fire up gstreamer
 	gstcontext_init(egl.display, egl.context, &gstcontext_texture_id, &gstcontext_texture_fresh, &video_done);
 	projector_logic_init(&video_done);

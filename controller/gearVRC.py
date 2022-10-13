@@ -25,13 +25,23 @@ manager = gatt.DeviceManager(adapter_name='hci0')
 
 def ror(l, n):
     return l[-n:] + l[:-n]
-
+    
+homeButton_last = False
+backButton_last = False
 middle_counter = 0
 up_counter = 0
 down_counter = 0
 left_counter = 0
 right_counter = 0
-
+volumeUpButton_last = False
+volumeDownButton_last = False
+trigger_counter_last = 0
+trigger_counter = 0
+trigger_timer = 0
+trigger_last = False
+start_dir = 0
+this_dir_last = 0
+touchpadButton_last = False
 class AnyDevice(gatt.Device):
     def connect_succeeded(self):
         super().connect_succeeded()
@@ -143,7 +153,26 @@ class AnyDevice(gatt.Device):
             volumeDownButton = True if ((int_values[58] & 32) == 32) else False
             NoButton         = True if ((int_values[58] & 64) == 64) else False
             
-           
+            
+            buttons_press = 0
+            if (homeButton):
+                buttons_press += 1
+            if (backButton):
+                buttons_press += 1                
+            if (touchpadButton):
+                buttons_press += 1
+            if (volumeUpButton):
+                buttons_press += 1                
+            if (volumeDownButton):
+                buttons_press += 1   
+            if (buttons_press > 1):
+                homeButton = False
+                backButton = False
+                touchpadButton = False
+                volumeUpButton = False
+                volumeDownButton = False
+                
+                
             if (axisX > 310):
                 axisX = 310
             if (axisY > 310):
@@ -153,7 +182,8 @@ class AnyDevice(gatt.Device):
             global down_counter
             global left_counter
             global right_counter
-                        
+            global touchpadButton_last  
+            
             threshold = 2
             if (touchpadButton):
                 if (axisX != 0 or axisY != 0):
@@ -202,18 +232,93 @@ class AnyDevice(gatt.Device):
                 right_counter = 0
                 
                 
-            if (middle_counter > threshold):
-                print("middle")
-            if (up_counter > threshold):
-                print("up")               
-            if (left_counter > threshold):
-                print("left")
-            if (right_counter > threshold):
-                print("right")   
-            if (down_counter > threshold):
-                print("down")   
-
+          
+            global trigger_counter
+            global trigger_timer
+            global trigger_last
+            
+            if (trigger_last == False and triggerButton == True):
+                trigger_counter = trigger_counter + 1
                 
+            trigger_last = triggerButton
+            
+            
+            global start_dir
+            global this_dir_last
+
+            this_dir = 0
+            if (middle_counter > threshold):
+                this_dir = 1
+            if (up_counter > threshold):
+                this_dir = 2    
+            if (left_counter > threshold):
+                this_dir = 3
+            if (right_counter > threshold):
+                this_dir = 4                   
+            if (down_counter > threshold):
+                this_dir = 5
+                
+
+            if (start_dir == 0 and this_dir != 0):
+                trigger_counter = 0
+                start_dir = this_dir
+ 
+              
+            if (touchpadButton_last == True and touchpadButton == False):
+                if ( start_dir == this_dir_last):
+                
+                    if (start_dir == 1):
+                        print("1 " + str(trigger_counter))
+                    if (start_dir == 2):
+                        print("2 "  + str(trigger_counter))
+                    if (start_dir == 3):
+                        print("3 " + str(trigger_counter))
+                    if (start_dir == 4):
+                        print("4 "  + str(trigger_counter))   
+                    if (start_dir == 5):
+                        print("5 " + str(trigger_counter))                       
+                trigger_counter = 0
+                start_dir = 0
+                
+            global volumeDownButton_last
+            global volumeUpButton_last
+            global homeButton_last
+            global backButton_last
+            
+            if (volumeDownButton == True and volumeDownButton_last == False):
+                trigger_counter = 0               
+            if (volumeUpButton == True and volumeUpButton_last == False):
+                trigger_counter = 0     
+
+            #up is number 6
+            #down is number 7
+            
+            if (volumeDownButton == False and volumeDownButton_last == True):
+                print("7 " + str(trigger_counter))   
+                trigger_counter = 0               
+            if (volumeUpButton == False and volumeUpButton_last == True):
+                print("6 " + str(trigger_counter))
+                trigger_counter = 0                      
+                
+            if (backButton == True and backButton_last == False):
+                trigger_counter = 0               
+            if (homeButton == True and homeButton_last == False):
+                trigger_counter = 0     
+            #back is number 8
+            #home is numba 9
+            if (backButton == False and backButton_last == True):
+                print("backButton " + str(trigger_counter))   
+                trigger_counter = 0               
+            if (homeButton == False and homeButton_last == True):
+                print("homeButton " + str(trigger_counter))
+                trigger_counter = 0                  
+                
+            this_dir_last = this_dir
+            touchpadButton_last = touchpadButton
+            volumeUpButton_last = volumeUpButton
+            volumeDownButton_last = volumeDownButton
+            homeButton_last = homeButton
+            backButton_last = backButton
 def defint():
     global device
     device.write(bytearray(b'\x00\x00'), 3)
