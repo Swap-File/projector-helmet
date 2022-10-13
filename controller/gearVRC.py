@@ -23,9 +23,7 @@ import more_itertools as mit
 
 manager = gatt.DeviceManager(adapter_name='hci0')
 
-def ror(l, n):
-    return l[-n:] + l[:-n]
-    
+indicator = -1  
 homeButton_last = False
 backButton_last = False
 middle_counter = 0
@@ -37,11 +35,18 @@ volumeUpButton_last = False
 volumeDownButton_last = False
 trigger_counter_last = 0
 trigger_counter = 0
-trigger_timer = 0
 trigger_last = False
 start_dir = 0
 this_dir_last = 0
 touchpadButton_last = False
+key_guard = False
+
+def print_wrap(input_string):
+    global key_guard
+    if (key_guard == False):
+        print(input_string, flush=True)
+
+
 class AnyDevice(gatt.Device):
     def connect_succeeded(self):
         super().connect_succeeded()
@@ -107,7 +112,9 @@ class AnyDevice(gatt.Device):
             cmd = bytearray(b'\x04\x00')
             for i in range(4):
                 self.__setup_characteristic.write_value(cmd)
+                
 
+            
     def characteristic_value_updated(self, characteristic, value):
         if (characteristic == self.__sensor_characteristic):
             if self.__VR == False:
@@ -153,7 +160,20 @@ class AnyDevice(gatt.Device):
             volumeDownButton = True if ((int_values[58] & 32) == 32) else False
             NoButton         = True if ((int_values[58] & 64) == 64) else False
             
+            global indicator
+            if (NoButton):
+                if (indicator != 1):
+                    time.sleep(0.1)
+                    print("201", flush=True)
+                    indicator = 1
+            else:
+                if (indicator != 0):
+                    time.sleep(0.1)
+                    print_wrap("200")
+                    indicator = 0
+
             
+   
             buttons_press = 0
             if (homeButton):
                 buttons_press += 1
@@ -183,7 +203,8 @@ class AnyDevice(gatt.Device):
             global left_counter
             global right_counter
             global touchpadButton_last  
-            
+            global key_guard
+
             threshold = 2
             if (touchpadButton):
                 if (axisX != 0 or axisY != 0):
@@ -234,7 +255,7 @@ class AnyDevice(gatt.Device):
                 
           
             global trigger_counter
-            global trigger_timer
+
             global trigger_last
             
             if (trigger_last == False and triggerButton == True):
@@ -268,15 +289,15 @@ class AnyDevice(gatt.Device):
                 if ( start_dir == this_dir_last):
                 
                     if (start_dir == 1):
-                        print("1 " + str(trigger_counter))
+                        print_wrap("1 " + str(trigger_counter))
                     if (start_dir == 2):
-                        print("2 "  + str(trigger_counter))
+                        print_wrap("2 "  + str(trigger_counter))
                     if (start_dir == 3):
-                        print("3 " + str(trigger_counter))
+                        print_wrap("3 " + str(trigger_counter))
                     if (start_dir == 4):
-                        print("4 "  + str(trigger_counter))   
+                        print_wrap("4 "  + str(trigger_counter))   
                     if (start_dir == 5):
-                        print("5 " + str(trigger_counter))                       
+                        print_wrap("5 " + str(trigger_counter))                       
                 trigger_counter = 0
                 start_dir = 0
                 
@@ -294,10 +315,10 @@ class AnyDevice(gatt.Device):
             #down is number 7
             
             if (volumeDownButton == False and volumeDownButton_last == True):
-                print("7 " + str(trigger_counter))   
+                print_wrap("7 " + str(trigger_counter))   
                 trigger_counter = 0               
             if (volumeUpButton == False and volumeUpButton_last == True):
-                print("6 " + str(trigger_counter))
+                print_wrap("6 " + str(trigger_counter))
                 trigger_counter = 0                      
                 
             if (backButton == True and backButton_last == False):
@@ -307,10 +328,19 @@ class AnyDevice(gatt.Device):
             #back is number 8
             #home is numba 9
             if (backButton == False and backButton_last == True):
-                print("backButton " + str(trigger_counter))   
+                print_wrap("backButton " + str(trigger_counter))   
                 trigger_counter = 0               
             if (homeButton == False and homeButton_last == True):
-                print("homeButton " + str(trigger_counter))
+                if (trigger_counter == 3):
+                    key_guard = not key_guard
+                    if (key_guard == False):
+                        time.sleep(0.1)
+                        print_wrap("200")
+                        indicator = 0
+                if (trigger_counter == 2 and key_guard == False):
+                    time.sleep(0.1)
+                    print_wrap("202")
+                print_wrap("homeButton " + str(trigger_counter))
                 trigger_counter = 0                  
                 
             this_dir_last = this_dir

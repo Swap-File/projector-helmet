@@ -209,6 +209,8 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 				button_indicated = true;
 			}else if (temp[0] == 201){
 				button_indicated = false;
+			}else if (temp[0] == 202){
+				gst_state = 0;
 			}else{
 				gst_state = temp[0];			
 			}
