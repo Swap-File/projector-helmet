@@ -328,7 +328,10 @@ class AnyDevice(gatt.Device):
             #back is number 8
             #home is numba 9
             if (backButton == False and backButton_last == True):
-                print_wrap("backButton " + str(trigger_counter))   
+                if (trigger_counter == 0): 
+                    print_wrap("205")
+                if (trigger_counter == 1): 
+                    print_wrap("206")
                 trigger_counter = 0               
             if (homeButton == False and homeButton_last == True):
                 if (trigger_counter == 3):
@@ -340,7 +343,7 @@ class AnyDevice(gatt.Device):
                 if (trigger_counter == 2 and key_guard == False):
                     time.sleep(0.1)
                     print_wrap("202")
-                print_wrap("homeButton " + str(trigger_counter))
+                #print_wrap("homeButton " + str(trigger_counter))
                 trigger_counter = 0                  
                 
             this_dir_last = this_dir

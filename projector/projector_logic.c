@@ -6,7 +6,7 @@
 #include "common/effects.h"
 #include "common/memory.h"
 
-
+bool loop_it = false;
 //in frames
 const long long int GST_MOVIE_1  = ((long long int)0 * 1000000000 / 30);
 const long long int GST_MOVIE_2  = ((long long int)1821 * 1000000000 / 30);
@@ -167,9 +167,16 @@ int projector_logic_update(int video_mode_requested) {
 	
 	if (video_mode_current >= GST_MOVIE_FIRST && video_mode_current <= GST_MOVIE_LAST && movie_not_eof){
 		if ( get_position() >= movie_end_times[video_mode_current -GST_MOVIE_FIRST]   )  {
+			if (loop_it){
+				printf("looper\n");
+				gst_element_set_state (GST_ELEMENT (pipeline_active), GST_STATE_PAUSED);
+				seek_to_time( movie_start_times[video_mode_current -GST_MOVIE_FIRST],&pipeline_active);
+				gst_element_set_state (GST_ELEMENT (pipeline_active), GST_STATE_PLAYING);
+			}else{
 			*video_done_flag = true;
 			printf("EOF by Time\n");
 			movie_not_eof = false;
+			}
 		}
 		
 	}

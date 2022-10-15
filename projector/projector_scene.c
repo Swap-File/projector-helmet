@@ -72,7 +72,7 @@ static GLfloat vTexCoords[] = {
 };
 
 volatile bool video_done = false;
-
+extern bool loop_it;
 uint32_t auto_advance_time = 0;
 
 bool auto_advance = false;
@@ -176,6 +176,24 @@ void plus_minus(int count){
 	
 }
 
+void auto_next(void){
+	if (gst_state >= GST_MOVIE_80s_FIRST && gst_state <= GST_MOVIE_80s_LAST){
+		set_mode(3,0);
+	}
+	if (gst_state >= GST_MOVIE_FAST_FIRST && gst_state <= GST_MOVIE_FAST_LAST){
+		set_mode(5,0);
+	}
+	if (gst_state >= GST_MOVIE_SLOW_FIRST && gst_state <= GST_MOVIE_SLOW_LAST){
+		set_mode(2,0);
+	}
+	if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
+		set_mode(4,0);
+	}
+	if (gst_state >= GST_MOVIE_OTHER_FIRST && gst_state <= GST_MOVIE_OTHER_LAST){
+		set_mode(1,0);
+	}
+}
+
 static void projector_scene_draw(unsigned i,char *debug_msg)
 {
 	
@@ -183,7 +201,7 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 	
 	if (video_done){
 		video_done = false;
-		gst_state = 0; /// TO DO auto next mode
+		auto_next();
 	}
 	
 
@@ -211,13 +229,22 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 				button_indicated = false;
 			}else if (temp[0] == 202){
 				gst_state = 0;
+			}else if (temp[0] == 205){
+				auto_next();
+			}else if (temp[0] == 206){
+				loop_it = true;
 			}else{
 				gst_state = temp[0];			
 			}
 		}
 	}
 	
+	static int previous_gst_state = -1;
 	
+	if (previous_gst_state != gst_state){
+		loop_it = false;
+		previous_gst_state = gst_state;
+	}
 
 	
 	bool frameskip = false;
