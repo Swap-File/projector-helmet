@@ -75,7 +75,7 @@ volatile bool video_done = false;
 extern bool loop_it;
 uint32_t auto_advance_time = 0;
 
-bool auto_advance = false;
+bool auto_advance = true;
 bool auto_change_category = false;
 
 int mode = 0;
@@ -177,43 +177,48 @@ void plus_minus(int count){
 }
 
 void auto_next(void){
-	if (gst_state >= GST_MOVIE_80s_FIRST && gst_state <= GST_MOVIE_80s_LAST){
+	if (gst_state >= GST_MOVIE_80s_FIRST && gst_state <= GST_MOVIE_80s_LAST){ //2
 		set_mode(3,0);
 	}
-	if (gst_state >= GST_MOVIE_FAST_FIRST && gst_state <= GST_MOVIE_FAST_LAST){
-		set_mode(5,0);
-	}
-	if (gst_state >= GST_MOVIE_SLOW_FIRST && gst_state <= GST_MOVIE_SLOW_LAST){
-		set_mode(2,0);
-	}
-	if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){
+	else if (gst_state >= GST_MOVIE_FAST_FIRST && gst_state <= GST_MOVIE_FAST_LAST){ //3
 		set_mode(4,0);
 	}
-	if (gst_state >= GST_MOVIE_OTHER_FIRST && gst_state <= GST_MOVIE_OTHER_LAST){
+	else if (gst_state >= GST_MOVIE_SLOW_FIRST && gst_state <= GST_MOVIE_SLOW_LAST){ //4
+		set_mode(2,0);
+	}
+	else if (gst_state >= GST_LIBVISUAL_FIRST && gst_state <= GST_LIBVISUAL_LAST){ //5
+		set_mode(5,0);
+	}
+	else if (gst_state >= GST_MOVIE_OTHER_FIRST && gst_state <= GST_MOVIE_OTHER_LAST){ //1
 		set_mode(1,0);
 	}
 }
 
 static void projector_scene_draw(unsigned i,char *debug_msg)
 {
-	
-	
-	
 	if (video_done){
 		video_done = false;
 		auto_next();
 	}
 	
-
+	if (auto_advance_time + 10000 < millis()){  //add a button to extend a mode time
+		if (loop_it == false && auto_advance == true){
+			auto_next();
+		}
+	}
+	
 	if (debug_msg[0] != '\0') {
 		int temp[3];
 		int result = sscanf(debug_msg,"%d %d", &temp[0], &temp[1]);
 		if (result == 2) {
 			if (temp[0] >= 1 && temp[0] <= 5){
 				set_mode ( temp[0], temp[1]);
+				if (temp[1] > 0){
+					auto_advance = false;
+				}
 			}
 		    if (temp[0] == 6){
-				plus_minus( (temp[1] + 1));
+				plus_minus((temp[1] + 1));
 			}
 			 if (temp[0] == 7){
 				plus_minus(-1 * (temp[1] + 1));
@@ -231,8 +236,16 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 				gst_state = 0;
 			}else if (temp[0] == 205){
 				auto_next();
+				auto_advance = true;
+				
 			}else if (temp[0] == 206){
 				loop_it = true;
+				auto_advance = false;
+			}else if (temp[0] == 207){
+				loop_it = false;
+				auto_advance = false;
+			}else if (temp[0] == 208){
+				auto_advance_time = millis() + 600000;
 			}else{
 				gst_state = temp[0];			
 			}
@@ -243,6 +256,7 @@ static void projector_scene_draw(unsigned i,char *debug_msg)
 	
 	if (previous_gst_state != gst_state){
 		loop_it = false;
+		auto_advance_time = millis();
 		previous_gst_state = gst_state;
 	}
 

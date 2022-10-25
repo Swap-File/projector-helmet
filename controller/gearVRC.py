@@ -297,7 +297,9 @@ class AnyDevice(gatt.Device):
                     if (start_dir == 4):
                         print_wrap("4 "  + str(trigger_counter))   
                     if (start_dir == 5):
-                        print_wrap("5 " + str(trigger_counter))                       
+                        print_wrap("5 " + str(trigger_counter))    
+                else:
+                    print_wrap("208")
                 trigger_counter = 0
                 start_dir = 0
                 
@@ -332,6 +334,8 @@ class AnyDevice(gatt.Device):
                     print_wrap("205")
                 if (trigger_counter == 1): 
                     print_wrap("206")
+                if (trigger_counter == 1): 
+                    print_wrap("207")
                 trigger_counter = 0               
             if (homeButton == False and homeButton_last == True):
                 if (trigger_counter == 3):
